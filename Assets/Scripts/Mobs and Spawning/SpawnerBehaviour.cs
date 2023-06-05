@@ -9,20 +9,22 @@ public class SpawnerBehaviour : MonoBehaviour
     public Transform m_SpawningPoint;
     public List<GameObject> m_CreepPrefabs;
     private int m_CurrentCreepCount = 0;
-    public int m_MaxCreepsCount = 5;
-    public float m_SpawningDelayInSeconds = 3.0f;
+    public int m_MaxCreepsCount;
+    public float m_SpawningDelayInSeconds;
     //private IEnumerator m_SpawningCoroutine;
-    private Dictionary<int, SpawnableCreep> m_AliveCreeps;
+    [SerializeField] private Dictionary<int, SpawnableCreep> m_AliveCreeps;
     private Stack<int> m_CreepIdTickets;
     private Random m_Random;
     // Start is called before the first frame update
 
     void Awake(){
         m_Random = new Random();
+        m_AliveCreeps = new Dictionary<int, SpawnableCreep>();
         m_CreepIdTickets = new Stack<int>();
         for (int i = 0; i < m_MaxCreepsCount; ++i) {
             m_CreepIdTickets.Push(i);
         }
+        Debug.Log($"Finihsing Awake::SpawnerBehaviour with m_CreepIdTickets.Count = {this.m_CreepIdTickets.Count}");
     }
 
     void Start(){
@@ -34,9 +36,11 @@ public class SpawnerBehaviour : MonoBehaviour
 
     // on spawned creep death event handler - substract the number of spawned creeps
     void HandleCreepDeath(SpawnableCreep dyingCreep){
-        print("removing creep from dict");
-        m_AliveCreeps.Remove(dyingCreep.CreepId);
-        m_CreepIdTickets.Push(dyingCreep.CreepId);
+        print($"SpawnerBehaviour::HandleCreepDeath {dyingCreep.gameObject.name}");
+        int releasedId = dyingCreep.CreepId;
+        dyingCreep.name += "_Dead";
+        m_AliveCreeps.Remove(releasedId);
+        m_CreepIdTickets.Push(releasedId);
         --m_CurrentCreepCount;
     }
 
@@ -45,8 +49,8 @@ public class SpawnerBehaviour : MonoBehaviour
         // mf: maybe move it to Update?
         while (true){
             yield return new WaitForSeconds(m_SpawningDelayInSeconds);
-            if (m_CurrentCreepCount <= m_MaxCreepsCount){
-                
+            Debug.Log($"SpawnToFull with ticket count {m_CreepIdTickets.Count}");
+            if (m_CreepIdTickets.Count > 0){
                 try {
                     SpawnNewCreep(m_Random.Next(0, m_CreepPrefabs.Count));
                 }
@@ -62,13 +66,14 @@ public class SpawnerBehaviour : MonoBehaviour
     }
 
     private void SpawnNewCreep(int creepReferenceIndex){
-        GameObject newCreepGO = Instantiate(m_CreepPrefabs[creepReferenceIndex], m_SpawningPoint.position, Quaternion.identity);
+        Debug.Log($"SpawnerBehaviour::SpawnNewCreep({creepReferenceIndex})");
+        GameObject newCreepGO = Instantiate(m_CreepPrefabs[creepReferenceIndex], m_SpawningPoint.position + new Vector3(m_Random.Next(0,5), 0.0f, m_Random.Next(0,5)), Quaternion.identity);
         SpawnableCreep newCreep = newCreepGO.GetComponent<SpawnableCreep>();
         newCreep.m_OnCreepDeathEvent += HandleCreepDeath;
         newCreep.CreepId = m_CreepIdTickets.Pop();
+        newCreep.name = $"SpawnedCreep{newCreep.CreepId}"; 
         m_AliveCreeps.Add(newCreep.CreepId, newCreep);
-        m_CurrentCreepCount++;
-
+        ++m_CurrentCreepCount;
     }
 
 }
