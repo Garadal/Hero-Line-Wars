@@ -35,8 +35,11 @@ public class SpawnerBehaviour : MonoBehaviour
     void Update(){}
 
     // on spawned creep death event handler - substract the number of spawned creeps
-    void HandleCreepDeath(SpawnableCreep dyingCreep){
-        print($"SpawnerBehaviour::HandleCreepDeath {dyingCreep.gameObject.name}");
+    void HandleCreepDeath(GameObject dyingCreepGO){
+        print($"SpawnerBehaviour::HandleCreepDeath {gameObject.name}");
+        HitPoints dyingCreepHP = dyingCreepGO.GetComponent<HitPoints>();
+        dyingCreepHP.OnDied -= HandleCreepDeath;
+        SpawnableCreep dyingCreep = dyingCreepGO.GetComponent<SpawnableCreep>();
         int releasedId = dyingCreep.CreepId;
         dyingCreep.name += "_Dead";
         m_AliveCreeps.Remove(releasedId);
@@ -49,7 +52,6 @@ public class SpawnerBehaviour : MonoBehaviour
         // mf: maybe move it to Update?
         while (true){
             yield return new WaitForSeconds(m_SpawningDelayInSeconds);
-            Debug.Log($"SpawnToFull with ticket count {m_CreepIdTickets.Count}");
             if (m_CreepIdTickets.Count > 0){
                 try {
                     SpawnNewCreep(m_Random.Next(0, m_CreepPrefabs.Count));
@@ -69,7 +71,8 @@ public class SpawnerBehaviour : MonoBehaviour
         Debug.Log($"SpawnerBehaviour::SpawnNewCreep({creepReferenceIndex})");
         GameObject newCreepGO = Instantiate(m_CreepPrefabs[creepReferenceIndex], m_SpawningPoint.position + new Vector3(m_Random.Next(0,5), 0.0f, m_Random.Next(0,5)), Quaternion.identity);
         SpawnableCreep newCreep = newCreepGO.GetComponent<SpawnableCreep>();
-        newCreep.m_OnCreepDeathEvent += HandleCreepDeath;
+        HitPoints creepHP = newCreepGO.GetComponent<HitPoints>();
+        creepHP.OnDied += HandleCreepDeath;
         newCreep.CreepId = m_CreepIdTickets.Pop();
         newCreep.name = $"SpawnedCreep{newCreep.CreepId}"; 
         m_AliveCreeps.Add(newCreep.CreepId, newCreep);
